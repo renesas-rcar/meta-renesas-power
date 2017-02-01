@@ -1,0 +1,185 @@
+From 7f373abd9cc268c815f6521a925e1d576c59ce4c Mon Sep 17 00:00:00 2001
+From: Juri Lelli <juri.lelli@arm.com>
+Date: Tue, 10 Feb 2015 12:05:22 +0000
+Subject: [PATCH 13/34] arm64, topology: Define JUNO energy and provide it to
+ the scheduler
+
+This patch is only here to be able to test provisioning of energy related
+data from an arch topology shim layer to the scheduler. Since there is no
+code today which deals with extracting energy related data from the dtb or
+acpi, and process it in the topology shim layer, the content of the
+sched_group_energy structures as well as the idle_state and capacity_state
+arrays are hard-coded here.
+
+This patch defines the sched_group_energy structure as well as the
+idle_state and capacity_state array for the cluster (relates to sched
+groups (sgs) in DIE sched domain level) and for the core (relates to sgs
+in MC sd level) for a Cortex A53 as well as for a Cortex A57.
+It further provides related implementations of the sched_domain_energy_f
+functions (cpu_cluster_energy() and cpu_core_energy()).
+
+To be able to propagate this information from the topology shim layer to
+the scheduler, the elements of the arm_topology[] table have been
+provisioned with the appropriate sched_domain_energy_f functions.
+
+Signed-off-by: Juri Lelli <juri.lelli@arm.com>
+(cherry picked from commit 48e0328f76a975cfe88b27fcebcc6620e457f3a0)
+Signed-off-by: Gaku Inami <gaku.inami.xw@bp.renesas.com>
+---
+ arch/arm64/kernel/topology.c | 130 +++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 130 insertions(+)
+
+diff --git a/arch/arm64/kernel/topology.c b/arch/arm64/kernel/topology.c
+index 694f6de..ca7ba61 100644
+--- a/arch/arm64/kernel/topology.c
++++ b/arch/arm64/kernel/topology.c
+@@ -206,11 +206,139 @@ out:
+ struct cpu_topology cpu_topology[NR_CPUS];
+ EXPORT_SYMBOL_GPL(cpu_topology);
+ 
++/*
++ * ARM JUNO specific energy cost model data. There are no unit requirements for
++ * the data. Data can be normalized to any reference point, but the
++ * normalization must be consistent. That is, one bogo-joule/watt must be the
++ * same quantity for all data, but we don't care what it is.
++ */
++
++static struct idle_state idle_states_cluster_a53[] = {
++	{ .power = 56 }, /* arch_cpu_idle() (active idle) = WFI */
++	{ .power = 56 }, /* WFI */
++	{ .power = 56 }, /* cpu-sleep-0 */
++	{ .power = 17 }, /* cluster-sleep-0 */
++};
++
++static struct idle_state idle_states_cluster_a57[] = {
++	{ .power = 65 }, /* arch_cpu_idle() (active idle) = WFI */
++	{ .power = 65 }, /* WFI */
++	{ .power = 65 }, /* cpu-sleep-0 */
++	{ .power = 24 }, /* cluster-sleep-0 */
++};
++
++static struct capacity_state cap_states_cluster_a53[] = {
++        /* Power per cluster */
++	{ .cap =  235, .power = 26, }, /*  450 MHz */
++	{ .cap =  303, .power = 30, }, /*  575 MHz */
++	{ .cap =  368, .power = 39, }, /*  700 MHz */
++	{ .cap =  406, .power = 47, }, /*  775 MHz */
++	{ .cap =  447, .power = 57, }, /*  850 Mhz */
++};
++
++static struct capacity_state cap_states_cluster_a57[] = {
++        /* Power per cluster */
++	{ .cap =  417, .power = 24, }, /*  450 MHz */
++	{ .cap =  579, .power = 32, }, /*  625 MHz */
++	{ .cap =  744, .power = 43, }, /*  800 MHz */
++	{ .cap =  883, .power = 49, }, /*  950 MHz */
++	{ .cap = 1024, .power = 64, }, /* 1100 MHz */
++};
++
++static struct sched_group_energy energy_cluster_a53 = {
++	.nr_idle_states = ARRAY_SIZE(idle_states_cluster_a53),
++	.idle_states    = idle_states_cluster_a53,
++	.nr_cap_states  = ARRAY_SIZE(cap_states_cluster_a53),
++	.cap_states     = cap_states_cluster_a53,
++};
++
++static struct sched_group_energy energy_cluster_a57 = {
++	.nr_idle_states = ARRAY_SIZE(idle_states_cluster_a57),
++	.idle_states    = idle_states_cluster_a57,
++	.nr_cap_states  = ARRAY_SIZE(cap_states_cluster_a57),
++	.cap_states     = cap_states_cluster_a57,
++};
++
++static struct idle_state idle_states_core_a53[] = {
++	{ .power = 6 }, /* arch_cpu_idle() (active idle) = WFI */
++	{ .power = 6 }, /* WFI */
++	{ .power = 0 }, /* cpu-sleep-0 */
++	{ .power = 0 }, /* cluster-sleep-0 */
++};
++
++static struct idle_state idle_states_core_a57[] = {
++	{ .power = 15 }, /* arch_cpu_idle() (active idle) = WFI */
++	{ .power = 15 }, /* WFI */
++	{ .power = 0  }, /* cpu-sleep-0 */
++	{ .power = 0  }, /* cluster-sleep-0 */
++};
++
++static struct capacity_state cap_states_core_a53[] = {
++        /* Power per cpu */
++	{ .cap =  235, .power =  33, }, /*  450 MHz */
++	{ .cap =  302, .power =  46, }, /*  575 MHz */
++	{ .cap =  368, .power =  61, }, /*  700 MHz */
++	{ .cap =  406, .power =  76, }, /*  775 MHz */
++	{ .cap =  447, .power =  93, }, /*  850 Mhz */
++};
++
++static struct capacity_state cap_states_core_a57[] = {
++        /* Power per cpu */
++	{ .cap =  417, .power = 168, }, /*  450 MHz */
++	{ .cap =  579, .power = 251, }, /*  625 MHz */
++	{ .cap =  744, .power = 359, }, /*  800 MHz */
++	{ .cap =  883, .power = 479, }, /*  950 MHz */
++	{ .cap = 1024, .power = 616, }, /* 1100 MHz */
++};
++
++static struct sched_group_energy energy_core_a53 = {
++	.nr_idle_states = ARRAY_SIZE(idle_states_core_a53),
++	.idle_states    = idle_states_core_a53,
++	.nr_cap_states  = ARRAY_SIZE(cap_states_core_a53),
++	.cap_states     = cap_states_core_a53,
++};
++
++static struct sched_group_energy energy_core_a57 = {
++	  .nr_idle_states = ARRAY_SIZE(idle_states_core_a57),
++	  .idle_states    = idle_states_core_a57,
++	  .nr_cap_states  = ARRAY_SIZE(cap_states_core_a57),
++	  .cap_states     = cap_states_core_a57,
++};
++
++/* sd energy functions */
++static inline
++const struct sched_group_energy * const cpu_cluster_energy(int cpu)
++{
++	return cpu_topology[cpu].cluster_id ? &energy_cluster_a53 :
++			&energy_cluster_a57;
++}
++
++static inline
++const struct sched_group_energy * const cpu_core_energy(int cpu)
++{
++	return cpu_topology[cpu].cluster_id ? &energy_core_a53 :
++			&energy_core_a57;
++}
++
+ const struct cpumask *cpu_coregroup_mask(int cpu)
+ {
+ 	return &cpu_topology[cpu].core_sibling;
+ }
+ 
++static inline int cpu_corepower_flags(void)
++{
++	return SD_SHARE_PKG_RESOURCES  | SD_SHARE_POWERDOMAIN | \
++	       SD_SHARE_CAP_STATES;
++}
++
++static struct sched_domain_topology_level arm64_topology[] = {
++#ifdef CONFIG_SCHED_MC
++	{ cpu_coregroup_mask, cpu_corepower_flags, cpu_core_energy, SD_INIT_NAME(MC) },
++#endif
++	{ cpu_cpu_mask, NULL, cpu_cluster_energy, SD_INIT_NAME(DIE) },
++	{ NULL, },
++};
++
+ static void update_siblings_masks(unsigned int cpuid)
+ {
+ 	struct cpu_topology *cpu_topo, *cpuid_topo = &cpu_topology[cpuid];
+@@ -302,4 +430,6 @@ void __init init_cpu_topology(void)
+ 	 */
+ 	if (of_have_populated_dt() && parse_dt_topology())
+ 		reset_cpu_topology();
++	else
++		set_sched_topology(arm64_topology);
+ }
+-- 
+1.9.1
+

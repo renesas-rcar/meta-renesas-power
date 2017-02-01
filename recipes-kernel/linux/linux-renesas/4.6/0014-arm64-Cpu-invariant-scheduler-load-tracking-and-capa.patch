@@ -1,0 +1,104 @@
+From d7ad92fddd4d2461c1c052d104122cb0cf3b0432 Mon Sep 17 00:00:00 2001
+From: Juri Lelli <juri.lelli@arm.com>
+Date: Thu, 30 Apr 2015 11:53:48 +0100
+Subject: [PATCH 14/34] arm64: Cpu invariant scheduler load-tracking and
+ capacity support
+
+Provides the scheduler with a cpu scaling correction factor for more
+accurate load-tracking and cpu capacity handling.
+
+The Energy Model (EM) (in fact the capacity value of the last element
+of the capacity states vector of the core (MC) level sched_group_energy
+structure) is used as the source for this cpu scaling factor.
+
+The cpu capacity value depends on the micro-architecture and the
+maximum frequency of the cpu.
+
+The maximum frequency part should not be confused with the frequency
+invariant scheduler load-tracking support which deals with frequency
+related scaling due to DFVS functionality.
+
+Signed-off-by: Juri Lelli <juri.lelli@arm.com>
+Signed-off-by: Dietmar Eggemann <dietmar.eggemann@arm.com>
+(cherry picked from commit c3dcc86edd7f613e2c13bda62a78412dcc4d1907)
+Signed-off-by: Gaku Inami <gaku.inami.xw@bp.renesas.com>
+---
+ arch/arm64/include/asm/topology.h |  4 +++-
+ arch/arm64/kernel/topology.c      | 28 ++++++++++++++++++++++++++++
+ 2 files changed, 31 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm64/include/asm/topology.h b/arch/arm64/include/asm/topology.h
+index 4a55584..b73e261 100644
+--- a/arch/arm64/include/asm/topology.h
++++ b/arch/arm64/include/asm/topology.h
+@@ -22,11 +22,13 @@ void init_cpu_topology(void);
+ void store_cpu_topology(unsigned int cpuid);
+ const struct cpumask *cpu_coregroup_mask(int cpu);
+ 
++struct sched_domain;
+ #ifdef CONFIG_CPU_FREQ
+ #define arch_scale_freq_capacity cpufreq_scale_freq_capacity
+-struct sched_domain;
+ extern unsigned long cpufreq_scale_freq_capacity(struct sched_domain *sd, int cpu);
+ #endif
++#define arch_scale_cpu_capacity scale_cpu_capacity
++extern unsigned long scale_cpu_capacity(struct sched_domain *sd, int cpu);
+ 
+ #ifdef CONFIG_NUMA
+ 
+diff --git a/arch/arm64/kernel/topology.c b/arch/arm64/kernel/topology.c
+index ca7ba61..199fcf7f 100644
+--- a/arch/arm64/kernel/topology.c
++++ b/arch/arm64/kernel/topology.c
+@@ -23,6 +23,18 @@
+ #include <asm/cputype.h>
+ #include <asm/topology.h>
+ 
++static DEFINE_PER_CPU(unsigned long, cpu_scale) = SCHED_CAPACITY_SCALE;
++
++unsigned long scale_cpu_capacity(struct sched_domain *sd, int cpu)
++{
++	return per_cpu(cpu_scale, cpu);
++}
++
++static void set_capacity_scale(unsigned int cpu, unsigned long capacity)
++{
++	per_cpu(cpu_scale, cpu) = capacity;
++}
++
+ static int __init get_cpu_for_node(struct device_node *node)
+ {
+ 	struct device_node *cpu_node;
+@@ -339,6 +351,21 @@ static struct sched_domain_topology_level arm64_topology[] = {
+ 	{ NULL, },
+ };
+ 
++static void update_cpu_capacity(unsigned int cpu)
++{
++	unsigned long capacity = SCHED_CAPACITY_SCALE;
++
++	if (cpu_core_energy(cpu)) {
++		int max_cap_idx = cpu_core_energy(cpu)->nr_cap_states - 1;
++		capacity = cpu_core_energy(cpu)->cap_states[max_cap_idx].cap;
++	}
++
++	set_capacity_scale(cpu, capacity);
++
++	pr_info("CPU%d: update cpu_capacity %lu\n",
++		cpu, arch_scale_cpu_capacity(NULL, cpu));
++}
++
+ static void update_siblings_masks(unsigned int cpuid)
+ {
+ 	struct cpu_topology *cpu_topo, *cpuid_topo = &cpu_topology[cpuid];
+@@ -400,6 +427,7 @@ void store_cpu_topology(unsigned int cpuid)
+ 
+ topology_populated:
+ 	update_siblings_masks(cpuid);
++	update_cpu_capacity(cpuid);
+ }
+ 
+ static void __init reset_cpu_topology(void)
+-- 
+1.9.1
+

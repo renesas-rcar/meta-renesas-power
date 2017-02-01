@@ -1,0 +1,47 @@
+From dd48280744438cc51a6c2e5c67977a9f5d0af59e Mon Sep 17 00:00:00 2001
+From: Gaku Inami <gaku.inami.xw@bp.renesas.com>
+Date: Mon, 29 Feb 2016 16:23:49 +0900
+Subject: [PATCH 34/34] sched: Fix const definition on function return type
+
+Signed-off-by: Gaku Inami <gaku.inami.xw@bp.renesas.com>
+---
+ arch/arm64/kernel/topology.c | 4 ++--
+ include/linux/sched.h        | 2 +-
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm64/kernel/topology.c b/arch/arm64/kernel/topology.c
+index 230ea15..b838136 100644
+--- a/arch/arm64/kernel/topology.c
++++ b/arch/arm64/kernel/topology.c
+@@ -273,13 +273,13 @@ struct sched_group_energy *energy(int cpu, struct sched_group_energy **sge)
+ }
+ 
+ static inline
+-const struct sched_group_energy * const cpu_cluster_energy(int cpu)
++const struct sched_group_energy *cpu_cluster_energy(int cpu)
+ {
+ 	return cluster_energy ? energy(cpu, cluster_energy) : NULL;
+ }
+ 
+ static inline
+-const struct sched_group_energy * const cpu_core_energy(int cpu)
++const struct sched_group_energy *cpu_core_energy(int cpu)
+ {
+ 	return core_energy ? energy(cpu, core_energy) : NULL;
+ }
+diff --git a/include/linux/sched.h b/include/linux/sched.h
+index 84d0d7f..9dceeee 100644
+--- a/include/linux/sched.h
++++ b/include/linux/sched.h
+@@ -1150,7 +1150,7 @@ bool cpus_share_cache(int this_cpu, int that_cpu);
+ typedef const struct cpumask *(*sched_domain_mask_f)(int cpu);
+ typedef int (*sched_domain_flags_f)(void);
+ typedef
+-const struct sched_group_energy * const(*sched_domain_energy_f)(int cpu);
++const struct sched_group_energy *(*sched_domain_energy_f)(int cpu);
+ 
+ #define SDTL_OVERLAP	0x01
+ 
+-- 
+1.9.1
+

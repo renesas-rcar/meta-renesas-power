@@ -1,0 +1,43 @@
+From 1bb93d36fb9e4251349fd54f3ce62f38b6c55665 Mon Sep 17 00:00:00 2001
+From: Dietmar Eggemann <dietmar.eggemann@arm.com>
+Date: Fri, 25 Sep 2015 17:15:11 +0100
+Subject: [PATCH 02/34] arm64: Enable frequency invariant scheduler
+ load-tracking support
+
+Defines arch_scale_freq_capacity() to use cpufreq implementation.
+
+Including <linux/cpufreq.h> in topology.h like for the arm arch doesn't
+work because of CONFIG_COMPAT=y (Kernel support for 32-bit EL0).
+That's why cpufreq_scale_freq_capacity() has to be declared extern in
+topology.h.
+
+Signed-off-by: Dietmar Eggemann <dietmar.eggemann@arm.com>
+(cherry picked from commit e3a969134dd1198b7bb247958628a01b5af6fbc4)
+Signed-off-by: Gaku Inami <gaku.inami.xw@bp.renesas.com>
+
+Conflicts:
+	arch/arm64/include/asm/topology.h
+---
+ arch/arm64/include/asm/topology.h | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/arch/arm64/include/asm/topology.h b/arch/arm64/include/asm/topology.h
+index 8b57339..4a55584 100644
+--- a/arch/arm64/include/asm/topology.h
++++ b/arch/arm64/include/asm/topology.h
+@@ -22,6 +22,12 @@ void init_cpu_topology(void);
+ void store_cpu_topology(unsigned int cpuid);
+ const struct cpumask *cpu_coregroup_mask(int cpu);
+ 
++#ifdef CONFIG_CPU_FREQ
++#define arch_scale_freq_capacity cpufreq_scale_freq_capacity
++struct sched_domain;
++extern unsigned long cpufreq_scale_freq_capacity(struct sched_domain *sd, int cpu);
++#endif
++
+ #ifdef CONFIG_NUMA
+ 
+ struct pci_bus;
+-- 
+1.9.1
+

@@ -1,0 +1,95 @@
+From e6d6c9c6beda45c05b7d63113054a09489438db5 Mon Sep 17 00:00:00 2001
+From: Dietmar Eggemann <dietmar.eggemann@arm.com>
+Date: Thu, 17 Sep 2015 16:10:56 +0100
+Subject: [PATCH 01/34] cpufreq: Frequency invariant scheduler load-tracking
+ support
+
+Implements cpufreq_scale_freq_capacity() to provide the scheduler with a
+frequency scaling correction factor for more accurate load-tracking.
+
+The factor is:
+
+	current_freq(cpu) << SCHED_CAPACITY_SHIFT / max_freq(cpu)
+
+In fact, freq_scale should be a struct cpufreq_policy data member. But
+this would require that the scheduler hot path (__update_load_avg()) would
+have to grab the cpufreq lock. This can be avoided by using per-cpu data
+initialized to SCHED_CAPACITY_SCALE for freq_scale.
+
+Signed-off-by: Dietmar Eggemann <dietmar.eggemann@arm.com>
+(cherry picked from commit e324c654cb1a7a88742a16901b63f1c2a1d02e2e)
+Signed-off-by: Gaku Inami <gaku.inami.xw@bp.renesas.com>
+---
+ drivers/cpufreq/cpufreq.c | 29 +++++++++++++++++++++++++++++
+ include/linux/cpufreq.h   |  3 +++
+ 2 files changed, 32 insertions(+)
+
+diff --git a/drivers/cpufreq/cpufreq.c b/drivers/cpufreq/cpufreq.c
+index 035513b..5a15019 100644
+--- a/drivers/cpufreq/cpufreq.c
++++ b/drivers/cpufreq/cpufreq.c
+@@ -312,6 +312,31 @@ static void adjust_jiffies(unsigned long val, struct cpufreq_freqs *ci)
+ #endif
+ }
+ 
++/*********************************************************************
++ *               FREQUENCY INVARIANT CPU CAPACITY                    *
++ *********************************************************************/
++
++static DEFINE_PER_CPU(unsigned long, freq_scale) = SCHED_CAPACITY_SCALE;
++
++static void
++scale_freq_capacity(struct cpufreq_policy *policy, struct cpufreq_freqs *freqs)
++{
++	unsigned long cur = freqs ? freqs->new : policy->cur;
++	unsigned long scale = (cur << SCHED_CAPACITY_SHIFT) / policy->max;
++	int cpu;
++
++	pr_debug("cpus %*pbl cur/cur max freq %lu/%u kHz freq scale %lu\n",
++		 cpumask_pr_args(policy->cpus), cur, policy->max, scale);
++
++	for_each_cpu(cpu, policy->cpus)
++		per_cpu(freq_scale, cpu) = scale;
++}
++
++unsigned long cpufreq_scale_freq_capacity(struct sched_domain *sd, int cpu)
++{
++	return per_cpu(freq_scale, cpu);
++}
++
+ static void __cpufreq_notify_transition(struct cpufreq_policy *policy,
+ 		struct cpufreq_freqs *freqs, unsigned int state)
+ {
+@@ -415,6 +440,8 @@ wait:
+ 
+ 	spin_unlock(&policy->transition_lock);
+ 
++	scale_freq_capacity(policy, freqs);
++
+ 	cpufreq_notify_transition(policy, freqs, CPUFREQ_PRECHANGE);
+ }
+ EXPORT_SYMBOL_GPL(cpufreq_freq_transition_begin);
+@@ -2198,6 +2225,8 @@ static int cpufreq_set_policy(struct cpufreq_policy *policy,
+ 	blocking_notifier_call_chain(&cpufreq_policy_notifier_list,
+ 			CPUFREQ_NOTIFY, new_policy);
+ 
++	scale_freq_capacity(new_policy, NULL);
++
+ 	policy->min = new_policy->min;
+ 	policy->max = new_policy->max;
+ 
+diff --git a/include/linux/cpufreq.h b/include/linux/cpufreq.h
+index 4e81e08..6e9b120 100644
+--- a/include/linux/cpufreq.h
++++ b/include/linux/cpufreq.h
+@@ -631,4 +631,7 @@ unsigned int cpufreq_generic_get(unsigned int cpu);
+ int cpufreq_generic_init(struct cpufreq_policy *policy,
+ 		struct cpufreq_frequency_table *table,
+ 		unsigned int transition_latency);
++
++struct sched_domain;
++unsigned long cpufreq_scale_freq_capacity(struct sched_domain *sd, int cpu);
+ #endif /* _LINUX_CPUFREQ_H */
+-- 
+1.9.1
+

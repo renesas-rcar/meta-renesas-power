@@ -1,0 +1,76 @@
+From c58ec1f7ebfc9e21d21c1719fcbe275f3a719ee7 Mon Sep 17 00:00:00 2001
+From: Dietmar Eggemann <dietmar.eggemann@arm.com>
+Date: Tue, 27 Jan 2015 14:04:17 +0000
+Subject: [PATCH 23/34] sched: Determine the current sched_group idle-state
+
+To estimate the energy consumption of a sched_group in
+sched_group_energy() it is necessary to know which idle-state the group
+is in when it is idle. For now, it is assumed that this is the current
+idle-state (though it might be wrong). Based on the individual cpu
+idle-states group_idle_state() finds the group idle-state.
+
+cc: Ingo Molnar <mingo@redhat.com>
+cc: Peter Zijlstra <peterz@infradead.org>
+Signed-off-by: Morten Rasmussen <morten.rasmussen@arm.com>
+Signed-off-by: Dietmar Eggemann <dietmar.eggemann@arm.com>
+(cherry picked from commit b55505f7d739e70e816d64ec3058e759133d2c3c)
+Signed-off-by: Gaku Inami <gaku.inami.xw@bp.renesas.com>
+---
+ kernel/sched/fair.c | 25 +++++++++++++++++++++----
+ 1 file changed, 21 insertions(+), 4 deletions(-)
+
+diff --git a/kernel/sched/fair.c b/kernel/sched/fair.c
+index 488c6bc..5b8f26c 100644
+--- a/kernel/sched/fair.c
++++ b/kernel/sched/fair.c
+@@ -5025,6 +5025,20 @@ static int find_new_capacity(struct energy_env *eenv,
+ 	return idx;
+ }
+ 
++static int group_idle_state(struct sched_group *sg)
++{
++	int i, state = INT_MAX;
++
++	/* Find the shallowest idle state in the sched group. */
++	for_each_cpu(i, sched_group_cpus(sg))
++		state = min(state, idle_get_state_idx(cpu_rq(i)));
++
++	/* Take non-cpuidle idling into account (active idle/arch_cpu_idle()) */
++	state++;
++
++	return state;
++}
++
+ /*
+  * sched_group_energy(): Computes the absolute energy consumption of cpus
+  * belonging to the sched_group including shared resources shared only by
+@@ -5077,7 +5091,8 @@ static int sched_group_energy(struct energy_env *eenv)
+ 
+ 			do {
+ 				unsigned long group_util;
+-				int sg_busy_energy, sg_idle_energy, cap_idx;
++				int sg_busy_energy, sg_idle_energy;
++				int cap_idx, idle_idx;
+ 
+ 				if (sg_shared_cap && sg_shared_cap->group_weight >= sg->group_weight)
+ 					eenv->sg_cap = sg_shared_cap;
+@@ -5085,11 +5100,13 @@ static int sched_group_energy(struct energy_env *eenv)
+ 					eenv->sg_cap = sg;
+ 
+ 				cap_idx = find_new_capacity(eenv, sg->sge);
++				idle_idx = group_idle_state(sg);
+ 				group_util = group_norm_util(eenv, sg);
+ 				sg_busy_energy = (group_util * sg->sge->cap_states[cap_idx].power)
+-										>> SCHED_CAPACITY_SHIFT;
+-				sg_idle_energy = ((SCHED_LOAD_SCALE-group_util) * sg->sge->idle_states[0].power)
+-										>> SCHED_CAPACITY_SHIFT;
++								>> SCHED_CAPACITY_SHIFT;
++				sg_idle_energy = ((SCHED_LOAD_SCALE-group_util)
++								* sg->sge->idle_states[idle_idx].power)
++								>> SCHED_CAPACITY_SHIFT;
+ 
+ 				total_energy += sg_busy_energy + sg_idle_energy;
+ 
+-- 
+1.9.1
+
