@@ -2,11 +2,15 @@ This README file contains information on the contents of the
 meta-renesas-power layer.
 
 This layer provides Energy Aware Scheduling(EAS) for R-Car Gen3.
-EAS for R-Car Gen3 is sample code for evaluation. Therefore, it
-is not officially supported by Renesas Electronics.
+EAS for R-Car Gen3 is sample code for evaluation and not officially
+supported by Renesas Electronics. Also some patches in EAS are
+ported from the following git repository.
+
+ - URL: git://linux-arm.org/linux-power.git
+ - URL: https://github.com/bjackman/linux-power.git
 
 Currently, this evaluates board and the SoCs of the following:
- - Board: Salvator-X
+ - Board: Salvator-X, Salvator-XS, H3ULCB, M3ULCB
  - SoC: R8A7795 (R-Car H3), R8A7796 (R-Car M3)
 
 Please see the corresponding sections below for details.
@@ -23,9 +27,9 @@ Dependencies
 
 This layer depends on:
 
-  URI: git://git.yoctoproject.org/meta-renesas
-  layers: meta-rcar-gen3
-  branch: jethro
+  - URI: git://git.yoctoproject.org/meta-renesas
+  - layers: meta-rcar-gen3
+  - branch: jethro
 
 Adding the meta-renesas-power layer to your build
 =================================================

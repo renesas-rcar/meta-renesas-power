@@ -1,0 +1,68 @@
+From 13fc46ea9af672c34a23ceadf32202ddcb73410f Mon Sep 17 00:00:00 2001
+From: Gaku Inami <gaku.inami.xw@bp.renesas.com>
+Date: Fri, 24 Mar 2017 19:56:34 +0900
+Subject: [PATCH 88/92] arm64: dts: r8a7796: Add cpu capacity-dmips-mhz
+
+Set the capacity-dmips-mhz for R-CAR M3.
+This value is based on the result of the evaluation.
+
+Signed-off-by: Gaku Inami <gaku.inami.xw@bp.renesas.com>
+---
+ arch/arm64/boot/dts/renesas/r8a7796.dtsi | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/renesas/r8a7796.dtsi b/arch/arm64/boot/dts/renesas/r8a7796.dtsi
+index de8e219..de953e6 100644
+--- a/arch/arm64/boot/dts/renesas/r8a7796.dtsi
++++ b/arch/arm64/boot/dts/renesas/r8a7796.dtsi
+@@ -97,6 +97,7 @@
+ 				<&cluster0_opp_tb1>, <&cluster0_opp_tb2>,
+ 				<&cluster0_opp_tb3>, <&cluster0_opp_tb4>,
+ 				<&cluster0_opp_tb5>, <&cluster0_opp_tb6>;
++			capacity-dmips-mhz = <1024>;
+ 		};
+ 
+ 		a57_1: cpu@1 {
+@@ -111,6 +112,7 @@
+ 				<&cluster0_opp_tb1>, <&cluster0_opp_tb2>,
+ 				<&cluster0_opp_tb3>, <&cluster0_opp_tb4>,
+ 				<&cluster0_opp_tb5>, <&cluster0_opp_tb6>;
++			capacity-dmips-mhz = <1024>;
+ 		};
+ 
+ 		a53_0: cpu@100 {
+@@ -121,6 +123,7 @@
+ 			dynamic-power-coefficient = <277>;
+ 			clocks =<&cpg CPG_CORE R8A7796_CLK_Z2>;
+ 			operating-points-v2 = <&cluster1_opp_tb0>;
++			capacity-dmips-mhz = <362>;
+ 		};
+ 
+ 		a53_1: cpu@101 {
+@@ -129,6 +132,7 @@
+ 			device_type = "cpu";
+ 			enable-method = "psci";
+ 			operating-points-v2 = <&cluster1_opp_tb0>;
++			capacity-dmips-mhz = <362>;
+ 		};
+ 
+ 		a53_2: cpu@102 {
+@@ -137,6 +141,7 @@
+ 			device_type = "cpu";
+ 			enable-method = "psci";
+ 			operating-points-v2 = <&cluster1_opp_tb0>;
++			capacity-dmips-mhz = <362>;
+ 		};
+ 
+ 		a53_3: cpu@103 {
+@@ -145,6 +150,7 @@
+ 			device_type = "cpu";
+ 			enable-method = "psci";
+ 			operating-points-v2 = <&cluster1_opp_tb0>;
++			capacity-dmips-mhz = <362>;
+ 		};
+ 
+ 		L2_CA57: cache-controller@0 {
+-- 
+1.9.1
+

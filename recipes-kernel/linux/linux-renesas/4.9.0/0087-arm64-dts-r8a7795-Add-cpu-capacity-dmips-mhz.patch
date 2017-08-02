@@ -1,0 +1,84 @@
+From faee6159a51d41f0c3f6815b6a52f09f7b666ac5 Mon Sep 17 00:00:00 2001
+From: Gaku Inami <gaku.inami.xw@bp.renesas.com>
+Date: Fri, 24 Mar 2017 19:13:27 +0900
+Subject: [PATCH 87/92] arm64: dts: r8a7795: Add cpu capacity-dmips-mhz
+
+Set the capacity-dmips-mhz for R-CAR H3(ES2.0).
+This value is based on the result of the evaluation.
+
+Signed-off-by: Gaku Inami <gaku.inami.xw@bp.renesas.com>
+---
+ arch/arm64/boot/dts/renesas/r8a7795.dtsi | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/renesas/r8a7795.dtsi b/arch/arm64/boot/dts/renesas/r8a7795.dtsi
+index 22df16ba..a8bac77 100644
+--- a/arch/arm64/boot/dts/renesas/r8a7795.dtsi
++++ b/arch/arm64/boot/dts/renesas/r8a7795.dtsi
+@@ -104,6 +104,7 @@
+ 				<&cluster0_opp_tb1>, <&cluster0_opp_tb2>,
+ 				<&cluster0_opp_tb3>, <&cluster0_opp_tb4>,
+ 				<&cluster0_opp_tb5>, <&cluster0_opp_tb6>;
++			capacity-dmips-mhz = <1024>;
+ 		};
+ 
+ 		a57_1: cpu@1 {
+@@ -118,6 +119,7 @@
+ 				<&cluster0_opp_tb1>, <&cluster0_opp_tb2>,
+ 				<&cluster0_opp_tb3>, <&cluster0_opp_tb4>,
+ 				<&cluster0_opp_tb5>, <&cluster0_opp_tb6>;
++			capacity-dmips-mhz = <1024>;
+ 		};
+ 
+ 		a57_2: cpu@2 {
+@@ -132,6 +134,7 @@
+ 				<&cluster0_opp_tb1>, <&cluster0_opp_tb2>,
+ 				<&cluster0_opp_tb3>, <&cluster0_opp_tb4>,
+ 				<&cluster0_opp_tb5>, <&cluster0_opp_tb6>;
++			capacity-dmips-mhz = <1024>;
+ 		};
+ 
+ 		a57_3: cpu@3 {
+@@ -146,6 +149,7 @@
+ 				<&cluster0_opp_tb1>, <&cluster0_opp_tb2>,
+ 				<&cluster0_opp_tb3>, <&cluster0_opp_tb4>,
+ 				<&cluster0_opp_tb5>, <&cluster0_opp_tb6>;
++			capacity-dmips-mhz = <1024>;
+ 		};
+ 
+ 		a53_0: cpu@100 {
+@@ -156,6 +160,7 @@
+ 			dynamic-power-coefficient = <277>;
+ 			clocks =<&cpg CPG_CORE R8A7795_CLK_Z2>;
+ 			operating-points-v2 = <&cluster1_opp_tb0>;
++			capacity-dmips-mhz = <379>;
+ 		};
+ 
+ 		a53_1: cpu@101 {
+@@ -164,6 +169,7 @@
+ 			device_type = "cpu";
+ 			enable-method = "psci";
+ 			operating-points-v2 = <&cluster1_opp_tb0>;
++			capacity-dmips-mhz = <379>;
+ 		};
+ 
+ 		a53_2: cpu@102 {
+@@ -172,6 +178,7 @@
+ 			device_type = "cpu";
+ 			enable-method = "psci";
+ 			operating-points-v2 = <&cluster1_opp_tb0>;
++			capacity-dmips-mhz = <379>;
+ 		};
+ 
+ 		a53_3: cpu@103 {
+@@ -180,6 +187,7 @@
+ 			device_type = "cpu";
+ 			enable-method = "psci";
+ 			operating-points-v2 = <&cluster1_opp_tb0>;
++			capacity-dmips-mhz = <379>;
+ 		};
+ 
+ 		L2_CA57: cache-controller@0 {
+-- 
+1.9.1
+
